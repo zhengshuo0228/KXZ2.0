@@ -134,10 +134,14 @@ app.get("/api/purchase/orders", async (req, res) => {
   const status = req.query.status ? String(req.query.status) : undefined;
   const orders = await prisma.purchaseOrder.findMany({
     where: status ? { status } : undefined,
-    include: { items: true },
+    include: { items: true, user: true },
     orderBy: { createdAt: "desc" },
   });
-  res.json(ok(orders.map((order) => ({ ...order, createdAt: order.createdAt.toISOString() }))));
+  res.json(ok(orders.map((order) => ({
+    ...order,
+    user: toUser(order.user),
+    createdAt: order.createdAt.toISOString(),
+  }))));
 });
 
 app.post("/api/purchase/orders", requireAuth, async (req, res) => {
@@ -159,7 +163,7 @@ app.post("/api/purchase/orders", requireAuth, async (req, res) => {
         })),
       },
     },
-    include: { items: true },
+    include: { items: true, user: true },
   });
 
   await prisma.notification.create({
@@ -173,7 +177,7 @@ app.post("/api/purchase/orders", requireAuth, async (req, res) => {
     },
   });
 
-  res.json(ok(order));
+  res.json(ok({ ...order, user: toUser(order.user), createdAt: order.createdAt.toISOString() }));
 });
 
 app.get("/api/admin/registrations", requireAuth, async (_req, res) => {

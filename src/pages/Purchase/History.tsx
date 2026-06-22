@@ -1,22 +1,57 @@
-﻿import { useState } from "react";
-import { pageStyle, containerStyle, PageTitle, SaaSCard, SaaSTab, EmptyState, ListItem, StatusBadge } from "../../components/saas";
+import { useEffect, useState } from "react";
 import { Search, ChevronRight } from "lucide-react";
+import { pageStyle, containerStyle, PageTitle, SaaSCard, SaaSTab, EmptyState, ListItem, StatusBadge } from "../../components/saas";
+import { getOrders } from "../../api/mockApi";
 
-const MOCK_HISTORY = [
-  { id: "1", submitter: "张三", dept: "厨房", items: "青椒 30 斤，番茄 20 斤", status: "completed", time: "2026-06-10 09:30" },
-  { id: "2", submitter: "李四", dept: "厨房", items: "牛腩 10 斤，鸡腿 15 斤", status: "reviewing", time: "2026-06-10 10:15" },
-  { id: "3", submitter: "王五", dept: "前厅", items: "矿泉水 5 箱", status: "approved", time: "2026-06-09 16:00" },
-];
+type PurchaseOrder = {
+  id: string;
+  status: "pending" | "approved" | "rejected" | string;
+  createdAt: string;
+  user?: { realName?: string; department?: { name?: string } };
+  items: Array<{ name: string; qty: number; unit: string }>;
+};
+
+const tabs = ["全部", "待审核", "已通过", "已驳回"];
+const statusMap: Record<string, string | undefined> = {
+  全部: undefined,
+  待审核: "pending",
+  已通过: "approved",
+  已驳回: "rejected",
+};
 
 export default function PurchaseHistory() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("全部");
-  const tabs = ["全部", "待审核", "已通过", "已驳回"];
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    getOrders()
+      .then((result) => {
+        if (result.code === 0) setOrders(result.data as PurchaseOrder[]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filteredOrders = orders.filter((order) => {
+    const targetStatus = statusMap[tab];
+    if (targetStatus && order.status !== targetStatus) return false;
+    const itemText = order.items.map((item) => `${item.name}${item.qty}${item.unit}`).join("，");
+    const submitter = order.user?.realName || "我";
+    return !search || itemText.includes(search) || submitter.includes(search);
+  });
+
+  const getStatus = (status: string) => {
+    if (status === "approved") return { text: "已通过", type: "success" as const };
+    if (status === "rejected") return { text: "已驳回", type: "danger" as const };
+    return { text: "待审核", type: "warning" as const };
+  };
 
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <PageTitle title="申购记录" subtitle="查看历史申购单据" />
+        <PageTitle title="申购记录" subtitle="查看已提交的申购单据和审核状态" />
 
         <SaaSCard style={{ padding: 12, marginBottom: 16 }}>
           <div style={{ position: "relative" }}>
@@ -24,10 +59,10 @@ export default function PurchaseHistory() {
             <input
               placeholder="搜索提交人、食材"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
               style={{ width: "100%", padding: "10px 14px 10px 36px", border: "1.5px solid #E2E8F0", borderRadius: 12, fontSize: 14, outline: "none" }}
-              onFocus={(e) => { e.target.style.borderColor = "#059669"; e.target.style.boxShadow = "0 0 0 3px rgba(5,150,105,0.10)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }}
+              onFocus={(event) => { event.target.style.borderColor = "#059669"; event.target.style.boxShadow = "0 0 0 3px rgba(5,150,105,0.10)"; }}
+              onBlur={(event) => { event.target.style.borderColor = "#E2E8F0"; event.target.style.boxShadow = "none"; }}
             />
           </div>
         </SaaSCard>
@@ -35,23 +70,25 @@ export default function PurchaseHistory() {
         <SaaSTab items={tabs} active={tab} onChange={setTab} />
 
         <SaaSCard style={{ padding: 0, overflow: "hidden" }}>
-          {MOCK_HISTORY.map((history) => (
-            <ListItem
-              key={history.id}
-              title={history.submitter}
-              subtitle={`${history.dept} · ${history.items} · ${history.time}`}
-              right={
-                <>
-                  <StatusBadge
-                    text={history.status === "completed" || history.status === "approved" ? "已完成" : history.status === "reviewing" ? "审核中" : "已驳回"}
-                    type={history.status === "completed" || history.status === "approved" ? "success" : history.status === "reviewing" ? "warning" : "danger"}
-                  />
-                  <ChevronRight size={16} color="#94A3B8" />
-                </>
-              }
-            />
-          ))}
-          {MOCK_HISTORY.length === 0 ? <EmptyState icon="📋" text="暂无申购记录" /> : null}
+          {loading ? <div style={{ padding: 24, color: "#94A3B8", textAlign: "center" }}>加载中...</div> : null}
+          {!loading && filteredOrders.map((order) => {
+            const status = getStatus(order.status);
+            const itemText = order.items.map((item) => `${item.name} ${item.qty}${item.unit}`).join("，");
+            return (
+              <ListItem
+                key={order.id}
+                title={order.user?.realName || "我的申购"}
+                subtitle={`${itemText} · ${new Date(order.createdAt).toLocaleString()}`}
+                right={
+                  <>
+                    <StatusBadge text={status.text} type={status.type} />
+                    <ChevronRight size={16} color="#94A3B8" />
+                  </>
+                }
+              />
+            );
+          })}
+          {!loading && filteredOrders.length === 0 ? <EmptyState icon="📋" text="暂无申购记录" /> : null}
         </SaaSCard>
       </div>
     </div>

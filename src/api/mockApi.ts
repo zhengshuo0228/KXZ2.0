@@ -113,6 +113,15 @@ export async function getOrders() {
   return realOrMock(() => realApi.get("/purchase/orders"), () => PURCHASE_ORDERS);
 }
 
+export async function submitPurchaseOrder(items: Array<{ menuId?: string; name: string; qty: number; unit: string }>) {
+  return realOrMock(() => realApi.post("/purchase/orders", { items }), () => ({
+    id: `mock_order_${Date.now()}`,
+    items,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  }));
+}
+
 export async function getRegistrations() {
   return realOrMock(() => realApi.get("/admin/registrations"), () => []);
 }

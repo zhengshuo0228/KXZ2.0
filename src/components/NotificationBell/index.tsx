@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Popup } from "antd-mobile";
 import { useAppStore } from "../../models/appStore";
 import { NOTIFICATION_ORDER } from "../../types/presets";
-import { markAllNotificationsRead, markNotificationRead } from "../../api/mockApi";
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from "../../api/mockApi";
 
 export default function NotificationBell() {
   const { notifications, setNotifications } = useAppStore();
   const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    getNotifications().then((result) => {
+      if (result.code === 0) setNotifications(result.data);
+    });
+  }, [setNotifications]);
 
   const unreadCount = notifications.filter((notification) => !notification.read).length;
   const sortedNotifications = [...notifications].sort((a, b) => {
