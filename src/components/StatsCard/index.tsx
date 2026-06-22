@@ -34,22 +34,8 @@ export default function StatsCard() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 15, fontWeight: 800 }}>📊 数据统计</div>
         <div style={{ display: "flex", gap: 6 }}>
-          {[
-            { key: "today", label: "今天" },
-            { key: "yesterday", label: "昨天" },
-          ].map((item) => (
-            <div
-              key={item.key}
-              onClick={() => setRange(item.key)}
-              style={{
-                padding: "4px 10px",
-                borderRadius: 12,
-                fontSize: 12,
-                cursor: "pointer",
-                background: range === item.key ? "#fff" : "rgba(255,255,255,0.6)",
-                fontWeight: range === item.key ? 700 : 400,
-              }}
-            >
+          {[{ key: "today", label: "今天" }, { key: "yesterday", label: "昨天" }].map((item) => (
+            <div key={item.key} onClick={() => setRange(item.key)} style={{ padding: "4px 10px", borderRadius: 12, fontSize: 12, cursor: "pointer", background: range === item.key ? "#fff" : "rgba(255,255,255,0.6)", fontWeight: range === item.key ? 700 : 400 }}>
               {item.label}
             </div>
           ))}
@@ -57,26 +43,40 @@ export default function StatsCard() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <div style={{ background: "rgba(255,255,255,0.86)", borderRadius: 14, padding: 12 }}>
-          <div style={{ fontSize: 12, color: "#475569" }}>📋 申购单数</div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>{stats.purchase.total}</div>
+        <div style={metricStyle}>
+          <div style={metricLabelStyle}>📋 申购单数</div>
+          <div style={metricValueStyle}>{stats.purchase.total}</div>
           <div style={{ fontSize: 12, color: "#059669" }}>通过 {stats.purchase.approved}</div>
           <div style={{ fontSize: 12, color: "#D97706" }}>待审 {stats.purchase.pending}</div>
         </div>
-        <div style={{ background: "rgba(255,255,255,0.86)", borderRadius: 14, padding: 12 }}>
-          <div style={{ fontSize: 12, color: "#475569" }}>🥬 食材数量</div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>{stats.ingredient.total}</div>
+        <div style={metricStyle}>
+          <div style={metricLabelStyle}>🥬 食材数量</div>
+          <div style={metricValueStyle}>{stats.ingredient.total}</div>
           <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>通知未读 {stats.notification.unread}</div>
           <div style={{ fontSize: 12, color: "#475569" }}>员工 {stats.account.activeUsers}</div>
         </div>
-        <div style={{ background: "rgba(255,255,255,0.86)", borderRadius: 14, padding: 12, gridColumn: "span 2" }}>
-          <div style={{ fontSize: 12, color: "#475569" }}>✅ 申购完成率</div>
+        <div style={{ ...metricStyle, gridColumn: "span 2" }}>
+          <div style={metricLabelStyle}>✅ 申购完成率</div>
           <div style={{ fontSize: 18, fontWeight: 800 }}>{stats.purchase.completionRate}%</div>
-          <div style={{ fontSize: 12, color: "#475569" }}>
-            驳回 {stats.purchase.rejected} 单 · 出勤 {stats.schedule.onDuty} 人
-          </div>
+          <div style={{ fontSize: 12, color: "#475569" }}>驳回 {stats.purchase.rejected} 单 · 出勤 {stats.schedule.onDuty} 人</div>
         </div>
       </div>
     </div>
   );
 }
+
+const metricStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.86)",
+  borderRadius: 14,
+  padding: 12,
+};
+
+const metricLabelStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "#475569",
+};
+
+const metricValueStyle: React.CSSProperties = {
+  fontSize: 24,
+  fontWeight: 800,
+};

@@ -54,11 +54,7 @@ export default function RegisterPage() {
       setDepartments(result.data);
       setForm((current) => {
         const departmentStillExists = result.data.some((department) => department.id === current.departmentId);
-        return {
-          ...current,
-          departmentId: departmentStillExists ? current.departmentId : result.data[0]?.id || "",
-          positionId: departmentStillExists ? current.positionId : "",
-        };
+        return { ...current, departmentId: departmentStillExists ? current.departmentId : result.data[0]?.id || "", positionId: departmentStillExists ? current.positionId : "" };
       });
     });
   }, [form.storeId]);
@@ -97,15 +93,7 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     try {
-      const result = await register({
-        username: form.username,
-        password: form.password,
-        realName: form.realName,
-        storeId: form.storeId,
-        departmentId: form.departmentId,
-        positionId: form.positionId,
-        remark: form.remark,
-      });
+      const result = await register(form);
       if (result.code === 0) {
         alert("注册申请已提交，请等待管理员审批");
         navigate("/login");
@@ -122,22 +110,7 @@ export default function RegisterPage() {
       <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>
         {label} <span style={{ color: "#DC2626" }}>*</span>
       </label>
-      <div
-        onClick={onClick}
-        style={{
-          width: "100%",
-          padding: "12px 14px",
-          border: "1.5px solid #E2E8F0",
-          borderRadius: 14,
-          fontSize: 14,
-          background: "#fff",
-          color: "#0F172A",
-          cursor: "pointer",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <div onClick={onClick} style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #E2E8F0", borderRadius: 14, fontSize: 14, background: "#fff", color: "#0F172A", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span>{value}</span>
         <ChevronRight size={16} color="#94A3B8" />
       </div>
@@ -147,37 +120,31 @@ export default function RegisterPage() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <PageTitle title="注册账号" subtitle="提交后需管理员在账号管理中审批，通过后即可登录" />
+        <PageTitle title="注册账号" subtitle="提交后需要管理员在账号管理中审批，通过后即可登录" />
 
         <SaaSCard style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
             <UserPlus size={17} color="#059669" /> 基本信息
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>用户名 *</label>
+            <label style={labelStyle}>用户名 *</label>
             <SaaSInput placeholder="请输入登录账号" value={form.username} onChange={(username) => setForm((current) => ({ ...current, username }))} />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>密码 *</label>
+            <label style={labelStyle}>密码 *</label>
             <SaaSInput placeholder="至少 6 位" value={form.password} onChange={(password) => setForm((current) => ({ ...current, password }))} type="password" />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>姓名 *</label>
+            <label style={labelStyle}>姓名 *</label>
             <SaaSInput placeholder="请输入真实姓名" value={form.realName} onChange={(realName) => setForm((current) => ({ ...current, realName }))} />
           </div>
         </SaaSCard>
 
         <SaaSCard style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>门店与岗位</div>
-          {renderSelect("申请门店", labelMap.store, () =>
-            chooseFromList("门店", stores, (storeId) => setForm((current) => ({ ...current, storeId, departmentId: "", positionId: "" })))
-          )}
-          {renderSelect("申请部门", labelMap.department, () =>
-            chooseFromList("部门", departments, (departmentId) => setForm((current) => ({ ...current, departmentId, positionId: "" })))
-          )}
-          {renderSelect("申请岗位", labelMap.position, () =>
-            chooseFromList("岗位", availablePositions, (positionId) => setForm((current) => ({ ...current, positionId })))
-          )}
+          {renderSelect("申请门店", labelMap.store, () => chooseFromList("门店", stores, (storeId) => setForm((current) => ({ ...current, storeId, departmentId: "", positionId: "" }))))}
+          {renderSelect("申请部门", labelMap.department, () => chooseFromList("部门", departments, (departmentId) => setForm((current) => ({ ...current, departmentId, positionId: "" }))))}
+          {renderSelect("申请岗位", labelMap.position, () => chooseFromList("岗位", availablePositions, (positionId) => setForm((current) => ({ ...current, positionId }))))}
         </SaaSCard>
 
         <SaaSCard style={{ marginBottom: 16 }}>
@@ -185,10 +152,16 @@ export default function RegisterPage() {
           <SaaSInput placeholder="申请说明，可选" value={form.remark} onChange={(remark) => setForm((current) => ({ ...current, remark }))} />
         </SaaSCard>
 
-        <SaaSButton onClick={handleSubmit} block>
-          {submitting ? "提交中..." : "提交注册"}
-        </SaaSButton>
+        <SaaSButton onClick={handleSubmit} block>{submitting ? "提交中..." : "提交注册"}</SaaSButton>
       </div>
     </div>
   );
 }
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "#64748B",
+  marginBottom: 8,
+};

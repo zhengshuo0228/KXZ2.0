@@ -57,21 +57,7 @@ export default function ProfilePage() {
         <PageTitle title="个人信息" subtitle="查看账号资料、修改密码和退出登录" />
 
         <SaaSCard style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 18,
-              background: "linear-gradient(135deg, #059669, #34D399)",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 24,
-              fontWeight: 800,
-              flexShrink: 0,
-            }}
-          >
+          <div style={{ width: 60, height: 60, borderRadius: 18, background: "linear-gradient(135deg, #059669, #34D399)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800, flexShrink: 0 }}>
             {initial}
           </div>
           <div>
@@ -81,14 +67,8 @@ export default function ProfilePage() {
         </SaaSCard>
 
         <SaaSCard style={{ marginBottom: 16, padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid #E2E8F0", fontSize: 13, fontWeight: 700, color: "#64748B", background: "#F8FAFC" }}>基本信息</div>
-          {[
-            ["用户名", user?.username || ""],
-            ["姓名", user?.realName || ""],
-            ["门店", storeName],
-            ["部门", departmentName],
-            ["岗位", positionText],
-          ].map(([label, value]) => (
+          <div style={sectionHeaderStyle}>基本信息</div>
+          {[["用户名", user?.username || ""], ["姓名", user?.realName || ""], ["门店", storeName], ["部门", departmentName], ["岗位", positionText]].map(([label, value]) => (
             <ListItem key={label} title={label} subtitle={String(value)} />
           ))}
         </SaaSCard>
@@ -96,26 +76,39 @@ export default function ProfilePage() {
         <SaaSCard style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>修改密码</div>
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>原密码</label>
+            <label style={labelStyle}>原密码</label>
             <SaaSInput placeholder="请输入原密码" value={oldPassword} onChange={setOldPassword} type="password" />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>新密码</label>
+            <label style={labelStyle}>新密码</label>
             <SaaSInput placeholder="至少 6 位" value={newPassword} onChange={setNewPassword} type="password" />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>确认新密码</label>
+            <label style={labelStyle}>确认新密码</label>
             <SaaSInput placeholder="请再次输入新密码" value={confirmPassword} onChange={setConfirmPassword} type="password" />
           </div>
-          <SaaSButton onClick={handleChangePassword} block>
-            {saving ? "保存中..." : "保存修改"}
-          </SaaSButton>
+          <SaaSButton onClick={handleChangePassword} block>{saving ? "保存中..." : "保存修改"}</SaaSButton>
         </SaaSCard>
 
-        <SaaSButton onClick={handleLogout} block style={{ background: "#fff", color: "#DC2626", border: "1.5px solid #FEE2E2" }}>
-          退出登录
-        </SaaSButton>
+        <SaaSButton onClick={handleLogout} block style={{ background: "#fff", color: "#DC2626", border: "1.5px solid #FEE2E2" }}>退出登录</SaaSButton>
       </div>
     </div>
   );
 }
+
+const sectionHeaderStyle: React.CSSProperties = {
+  padding: "12px 16px",
+  borderBottom: "1px solid #E2E8F0",
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#64748B",
+  background: "#F8FAFC",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "#64748B",
+  marginBottom: 8,
+};

@@ -19,19 +19,16 @@ export default function PerformanceDashboard() {
               <StatCard icon={<TrendingUp size={18} />} label="本月评级" value="A" color="#4F46E5" />
             </div>
             <SaaSCard style={{ padding: 0, overflow: "hidden" }}>
-              <ListItem title="食材节约" subtitle="节约蔬菜类 5 斤" right={<span style={{ color: "#059669", fontWeight: 700, fontSize: 14 }}>+10</span>} />
-              <ListItem title="按时到岗" subtitle="本月 22 天全勤" right={<span style={{ color: "#059669", fontWeight: 700, fontSize: 14 }}>+22</span>} />
-              <ListItem title="卫生检查" subtitle="不合格，需整改" right={<span style={{ color: "#DC2626", fontWeight: 700, fontSize: 14 }}>-5</span>} />
+              <ListItem title="食材节约" subtitle="节约蔬菜类 5 斤" right={<span style={scorePlus}>+10</span>} />
+              <ListItem title="按时到岗" subtitle="本月 22 天全勤" right={<span style={scorePlus}>+22</span>} />
+              <ListItem title="卫生检查" subtitle="不合格，需整改" right={<span style={scoreMinus}>-5</span>} />
             </SaaSCard>
           </>
         )}
 
         {tab === "全员记录" && (
           <SaaSCard style={{ padding: 0, overflow: "hidden" }}>
-            {[
-              { name: "张三", dept: "厨房", score: "128", level: "A" },
-              { name: "李四", dept: "厨房", score: "105", level: "B" },
-            ].map((item) => (
+            {[{ name: "张三", dept: "厨房", score: "128", level: "A" }, { name: "李四", dept: "厨房", score: "105", level: "B" }].map((item) => (
               <ListItem key={item.name} title={item.name} subtitle={`${item.dept} · 积分 ${item.score}`} right={<StatusBadge text={`评级 ${item.level}`} type={item.level === "A" ? "success" : "info"} />} />
             ))}
           </SaaSCard>
@@ -39,11 +36,7 @@ export default function PerformanceDashboard() {
 
         {tab === "积分排行" && (
           <SaaSCard style={{ padding: 0, overflow: "hidden" }}>
-            {[
-              { rank: 1, name: "张三", score: 128 },
-              { rank: 2, name: "王五", score: 115 },
-              { rank: 3, name: "李四", score: 105 },
-            ].map((item) => (
+            {[{ rank: 1, name: "张三", score: 128 }, { rank: 2, name: "王五", score: 115 }, { rank: 3, name: "李四", score: 105 }].map((item) => (
               <ListItem key={item.name} title={`${item.rank}. ${item.name}`} subtitle={`积分 ${item.score}`} right={<span style={{ fontWeight: 700, color: "#059669" }}>{item.score} 分</span>} />
             ))}
           </SaaSCard>
@@ -51,8 +44,8 @@ export default function PerformanceDashboard() {
 
         {tab === "待审核" && (
           <SaaSCard style={{ padding: 0, overflow: "hidden" }}>
-            <ListItem title="张三 · 绩效申请" subtitle="食材节约 3 斤 · 2026-06-10" right={<><StatusBadge text="待审核" type="warning" /><span style={{ marginLeft: 8, cursor: "pointer", color: "#059669", fontWeight: 700, fontSize: 13 }}>审核</span></>} />
-            <ListItem title="李四 · 绩效申请" subtitle="迟到 2 次 · 2026-06-09" right={<><StatusBadge text="待审核" type="warning" /><span style={{ marginLeft: 8, cursor: "pointer", color: "#059669", fontWeight: 700, fontSize: 13 }}>审核</span></>} />
+            <ListItem title="张三 · 绩效申请" subtitle="食材节约 3 斤 · 2026-06-10" right={<><StatusBadge text="待审核" type="warning" /><span style={reviewLink}>审核</span></>} />
+            <ListItem title="李四 · 绩效申请" subtitle="迟到 2 次 · 2026-06-09" right={<><StatusBadge text="待审核" type="warning" /><span style={reviewLink}>审核</span></>} />
           </SaaSCard>
         )}
 
@@ -75,9 +68,7 @@ export default function PerformanceDashboard() {
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
                 <CheckCircle2 size={16} color="#059669" /> 记录调整
               </div>
-              <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>
-                管理员可对员工绩效记录进行手动调整；深度功能后续接入数据库和通知。
-              </div>
+              <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>管理员可对员工绩效记录进行手动调整，调整后会通知相关员工。</div>
             </SaaSCard>
           </>
         )}
@@ -85,3 +76,7 @@ export default function PerformanceDashboard() {
     </div>
   );
 }
+
+const scorePlus: React.CSSProperties = { color: "#059669", fontWeight: 700, fontSize: 14 };
+const scoreMinus: React.CSSProperties = { color: "#DC2626", fontWeight: 700, fontSize: 14 };
+const reviewLink: React.CSSProperties = { marginLeft: 8, cursor: "pointer", color: "#059669", fontWeight: 700, fontSize: 13 };

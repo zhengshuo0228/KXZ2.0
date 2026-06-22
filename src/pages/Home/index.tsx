@@ -17,7 +17,6 @@ interface HomeCard {
   perm?: string;
   route: string;
   span?: number;
-  badge?: number;
   gradient?: string;
   white?: boolean;
   borderColor?: string;
@@ -64,18 +63,7 @@ const s = {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const {
-    currentUser,
-    currentPositions,
-    currentStoreId,
-    stores,
-    hasPermission,
-    setStores,
-    setDepartments,
-    setNotifications,
-    setCurrentStore,
-  } = useAppStore();
-  const greeting = getGreeting();
+  const { currentUser, currentPositions, currentStoreId, stores, hasPermission, setStores, setDepartments, setNotifications, setCurrentStore } = useAppStore();
   const user = currentUser;
 
   useEffect(() => {
@@ -83,7 +71,6 @@ export default function HomePage() {
       navigate("/login");
       return;
     }
-
     Promise.all([getStores(), getDepartments(), getNotifications()]).then(([storeResult, departmentResult, notificationResult]) => {
       if (storeResult.code === 0) {
         setStores(storeResult.data);
@@ -97,18 +84,10 @@ export default function HomePage() {
   }, [user?.id]);
 
   const storeName = stores.find((store) => store.id === currentStoreId)?.name || stores.find((store) => store.id === user?.storeId)?.name || "未选择门店";
-
-  const getTopPositionName = () => {
-    if (!currentPositions?.length) return "";
-    const kitchen = currentPositions.filter((position) => position.department === "kitchen");
-    const dining = currentPositions.filter((position) => position.department === "dining");
-    if (kitchen.length > 0) return kitchen.reduce((a, b) => (a.rank <= b.rank ? a : b)).name;
-    if (dining.length > 0) return dining.reduce((a, b) => (a.rank <= b.rank ? a : b)).name;
-    return currentPositions[0].name;
-  };
-
+  const kitchen = currentPositions.filter((position) => position.department === "kitchen");
+  const dining = currentPositions.filter((position) => position.department === "dining");
+  const positionName = kitchen[0]?.name || dining[0]?.name || currentPositions[0]?.name || "未设置岗位";
   const visibleCards = HOME_CARDS.filter((card) => !card.perm || hasPermission(card.perm));
-  const positionName = getTopPositionName();
 
   return (
     <div style={s.page}>
@@ -118,35 +97,24 @@ export default function HomePage() {
             <div style={s.logoIcon}>开</div>
             <div style={s.logoText}>
               <span style={s.logoTitle}>{storeName}</span>
-              <span style={s.logoUser}>{user?.realName || "未登录"} · {positionName || "未设置岗位"}</span>
+              <span style={s.logoUser}>{user?.realName || "未登录"} · {positionName}</span>
             </div>
           </div>
           <div style={s.rightIcons}>
             <StoreSwitcher stores={stores} />
             <NotificationBell />
-            <div style={s.avatarWrap}>
-              <ProfileAvatar />
-            </div>
+            <div style={s.avatarWrap}><ProfileAvatar /></div>
           </div>
         </div>
 
         <div style={s.greeting}>
-          <div style={s.greetingHi}>{greeting}，{user?.realName || "伙伴"} ☀️</div>
+          <div style={s.greetingHi}>{getGreeting()}，{user?.realName || "伙伴"} ☀️</div>
           <div style={s.greetingSub}>欢迎使用开小灶 PMS，今天也稳稳出餐。</div>
         </div>
 
         <div style={s.grid}>
           {visibleCards.map((card) => (
-            <div
-              key={card.key}
-              onClick={() => navigate(card.route)}
-              style={{
-                ...s.card,
-                ...(card.span === 2 ? s.span2 : {}),
-                background: card.white ? "#fff" : card.gradient,
-                ...(card.white ? { border: `1.5px solid ${card.borderColor}22`, color: "#0F172A" } : { color: "#fff" }),
-              }}
-            >
+            <div key={card.key} onClick={() => navigate(card.route)} style={{ ...s.card, ...(card.span === 2 ? s.span2 : {}), background: card.white ? "#fff" : card.gradient, ...(card.white ? { border: `1.5px solid ${card.borderColor}22`, color: "#0F172A" } : { color: "#fff" }) }}>
               <div style={{ ...s.cardIconWrap, background: card.white ? `${card.iconColor}14` : "rgba(255,255,255,0.18)" }}>
                 <span style={{ color: card.white ? card.iconColor : "#fff" }}>{card.icon}</span>
               </div>
@@ -157,9 +125,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        <div style={s.bottomStats}>
-          <StatsCard />
-        </div>
+        <div style={s.bottomStats}><StatsCard /></div>
       </div>
     </div>
   );
