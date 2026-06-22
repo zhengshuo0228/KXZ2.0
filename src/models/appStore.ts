@@ -68,10 +68,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!currentUser) return false;
     if (currentUser.username === "000") return true;
     for (const pos of currentPositions) {
-      for (const category of Object.values(pos.permissions)) {
-        if (category.includes(perm)) return true;
+      const permissions = pos?.permissions || {};
+      for (const category of Object.values(permissions)) {
+        if (Array.isArray(category) && category.includes(perm)) return true;
       }
-      if (pos.adminPermissions.includes(perm as AdminPermission)) return true;
+      if (Array.isArray(pos?.adminPermissions) && pos.adminPermissions.includes(perm as AdminPermission)) return true;
     }
     return false;
   },
@@ -92,8 +93,18 @@ if (typeof window !== "undefined") {
   const savedPositions = localStorage.getItem("currentPositions");
   const savedStore = localStorage.getItem("currentStore");
   if (savedUser) {
-    const s = useAppStore.getState();
-    s.login(JSON.parse(savedUser), savedPositions ? JSON.parse(savedPositions) : []);
-    if (savedStore) s.setCurrentStore(savedStore);
+    try {
+      const parsedUser = JSON.parse(savedUser);
+      const parsedPositions = savedPositions ? JSON.parse(savedPositions) : [];
+      const s = useAppStore.getState();
+      s.login(parsedUser, Array.isArray(parsedPositions) ? parsedPositions : []);
+      if (savedStore) s.setCurrentStore(savedStore);
+    } catch (error) {
+      console.warn("本地登录缓存异常，已清理：", error);
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("currentPositions");
+      localStorage.removeItem("token");
+      localStorage.removeItem("currentStore");
+    }
   }
 }

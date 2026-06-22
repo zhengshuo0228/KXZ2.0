@@ -3,16 +3,26 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { registerPush } from "./utils/push";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-// 初始化推送通知
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && window.isSecureContext) {
   window.addEventListener("load", async () => {
-    await registerPush();
+    try {
+      await registerPush();
+    } catch (error) {
+      console.warn("推送初始化失败，已跳过：", error);
+    }
   });
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const root = document.getElementById("root");
+
+if (root) {
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+}
