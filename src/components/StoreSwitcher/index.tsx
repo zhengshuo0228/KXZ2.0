@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type React from "react";
 import { Popup, Toast } from "antd-mobile";
 import { MapPin } from "lucide-react";
 import { useAppStore } from "../../models/appStore";
@@ -10,10 +11,11 @@ interface StoreSwitcherProps {
 export default function StoreSwitcher({ stores }: StoreSwitcherProps) {
   const { currentUser, currentStoreId, setCurrentStore } = useAppStore();
   const [visible, setVisible] = useState(false);
+  const safeStores = Array.isArray(stores) ? stores : [];
 
-  if (!currentUser || stores.length <= 1) return null;
+  if (!currentUser || safeStores.length <= 1) return null;
 
-  const visibleStores = currentUser.username === "000" ? stores : stores.filter((store) => store.id === currentUser.storeId);
+  const visibleStores = currentUser.username === "000" ? safeStores : safeStores.filter((store) => store.id === currentUser.storeId);
   if (visibleStores.length <= 1) return null;
 
   return (

@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { User, Position, Store, Department, NotificationItem, AdminPermission } from "../types";
 
+const asArray = <T>(value: T[] | unknown): T[] => (Array.isArray(value) ? value : []);
+
 interface AppState {
   // Auth
   currentUser: User | null;
@@ -38,10 +40,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   notifications: [],
 
   login: (user, positions, token = localStorage.getItem("token") || "mock-token") => {
+    const safePositions = asArray<Position>(positions);
     localStorage.setItem("currentUser", JSON.stringify(user));
-    localStorage.setItem("currentPositions", JSON.stringify(positions));
+    localStorage.setItem("currentPositions", JSON.stringify(safePositions));
     localStorage.setItem("token", token);
-    set({ currentUser: user, currentPositions: positions, token, isAuthenticated: true, currentStoreId: user.storeId || "" });
+    set({ currentUser: user, currentPositions: safePositions, token, isAuthenticated: true, currentStoreId: user.storeId || "" });
   },
 
   logout: () => {
@@ -57,17 +60,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentStoreId: id });
   },
 
-  setStores: (stores) => set({ stores }),
+  setStores: (stores) => set({ stores: asArray<Store>(stores) }),
 
-  setDepartments: (departments) => set({ departments }),
+  setDepartments: (departments) => set({ departments: asArray<Department>(departments) }),
 
-  setNotifications: (n) => set({ notifications: n }),
+  setNotifications: (n) => set({ notifications: asArray<NotificationItem>(n) }),
 
   hasPermission: (perm) => {
     const { currentUser, currentPositions } = get();
     if (!currentUser) return false;
     if (currentUser.username === "000") return true;
-    for (const pos of currentPositions) {
+    for (const pos of asArray<Position>(currentPositions)) {
       const permissions = pos?.permissions || {};
       for (const category of Object.values(permissions)) {
         if (Array.isArray(category) && category.includes(perm)) return true;
@@ -80,7 +83,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   getVisibleScope: () => {
     const { currentUser, stores } = get();
     if (!currentUser || currentUser.username === "000") {
-      return { stores: new Set(stores.map((s) => s.id)), departments: new Set() };
+      return { stores: new Set(asArray<Store>(stores).map((s) => s.id)), departments: new Set() };
     }
     const s = new Set([currentUser.storeId]);
     return { stores: s, departments: new Set([currentUser.departmentId]) };

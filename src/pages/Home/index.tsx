@@ -73,20 +73,23 @@ export default function HomePage() {
     }
     Promise.all([getStores(), getDepartments(), getNotifications()]).then(([storeResult, departmentResult, notificationResult]) => {
       if (storeResult.code === 0) {
-        setStores(storeResult.data);
+        const storeList = Array.isArray(storeResult.data) ? storeResult.data : [];
+        setStores(storeList);
         const savedStore = localStorage.getItem("currentStore");
-        const nextStore = savedStore || currentStoreId || user.storeId || storeResult.data[0]?.id || "";
+        const nextStore = savedStore || currentStoreId || user.storeId || storeList[0]?.id || "";
         if (nextStore) setCurrentStore(nextStore);
       }
-      if (departmentResult.code === 0) setDepartments(departmentResult.data);
-      if (notificationResult.code === 0) setNotifications(notificationResult.data);
+      if (departmentResult.code === 0) setDepartments(Array.isArray(departmentResult.data) ? departmentResult.data : []);
+      if (notificationResult.code === 0) setNotifications(Array.isArray(notificationResult.data) ? notificationResult.data : []);
     });
   }, [user?.id]);
 
-  const storeName = stores.find((store) => store.id === currentStoreId)?.name || stores.find((store) => store.id === user?.storeId)?.name || "未选择门店";
-  const kitchen = currentPositions.filter((position) => position.department === "kitchen");
-  const dining = currentPositions.filter((position) => position.department === "dining");
-  const positionName = kitchen[0]?.name || dining[0]?.name || currentPositions[0]?.name || "未设置岗位";
+  const safeStores = Array.isArray(stores) ? stores : [];
+  const safePositions = Array.isArray(currentPositions) ? currentPositions : [];
+  const storeName = safeStores.find((store) => store.id === currentStoreId)?.name || safeStores.find((store) => store.id === user?.storeId)?.name || "未选择门店";
+  const kitchen = safePositions.filter((position) => position.department === "kitchen");
+  const dining = safePositions.filter((position) => position.department === "dining");
+  const positionName = kitchen[0]?.name || dining[0]?.name || safePositions[0]?.name || "未设置岗位";
   const visibleCards = HOME_CARDS.filter((card) => !card.perm || hasPermission(card.perm));
 
   return (
@@ -101,7 +104,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={s.rightIcons}>
-            <StoreSwitcher stores={stores} />
+            <StoreSwitcher stores={safeStores} />
             <NotificationBell />
             <div style={s.avatarWrap}><ProfileAvatar /></div>
           </div>

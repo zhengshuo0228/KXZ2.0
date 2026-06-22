@@ -50,10 +50,17 @@ type CreateUserPayload = {
 const ok = <T>(data: T): ApiResponse<T> => ({ code: 0, data });
 const realApi = api as any;
 
+function unwrapApiData<T>(response: any): T {
+  if (response && typeof response === "object" && "code" in response && "data" in response) {
+    return response.data as T;
+  }
+  return response as T;
+}
+
 async function realOrMock<T>(request: () => Promise<T>, fallback: () => T | Promise<T>): Promise<ApiResponse<T>> {
   try {
     const data = await request();
-    return ok(data);
+    return ok(unwrapApiData<T>(data));
   } catch (error) {
     console.warn("真实 API 不可用，已切换本地 Mock：", error);
     return ok(await fallback());
@@ -115,8 +122,8 @@ export async function getStatsSummary(range = "today") {
     ingredient: { total: MENU_ITEMS.length },
     account: { activeUsers: MOCK_USERS.length },
     notification: { unread: MOCK_NOTIFICATIONS.filter((item) => !item.read).length },
-    performance: { applied: 0, approved: 0 },
-    schedule: { onLeave: 0, onDuty: MOCK_USERS.length },
+    performance: { applied: 1, approved: 1 },
+    schedule: { onLeave: 1, onDuty: MOCK_USERS.length - 1 },
   }));
 }
 
@@ -182,6 +189,77 @@ export async function updateUserPositions(id: string, positionIds: string[]) {
 
 export async function approveRegistration(id: string, approved: boolean) {
   return realOrMock(() => realApi.put(`/admin/registrations/${id}`, { approved }), () => ({ id, status: approved ? "approved" : "rejected" }));
+}
+
+export async function getMyPerformance() {
+  return realOrMock(
+    () => realApi.get("/performance/my"),
+    () => ({
+      total: 27,
+      records: [
+        { id: "mock_perf_1", title: "食材节约", type: "加分", points: 10, status: "approved", remark: "", createdAt: new Date().toISOString() },
+        { id: "mock_perf_2", title: "卫生检查", type: "扣分", points: -5, status: "approved", remark: "需整改", createdAt: new Date(Date.now() - 86400000).toISOString() },
+      ],
+    })
+  );
+}
+
+export async function getAllPerformance() {
+  return realOrMock(
+    () => realApi.get("/performance/all"),
+    () => [
+      { id: "mock_perf_1", title: "食材节约", type: "加分", points: 10, status: "approved", createdAt: new Date().toISOString(), user: { realName: "张三" } },
+      { id: "mock_perf_2", title: "迟到", type: "扣分", points: -3, status: "approved", createdAt: new Date(Date.now() - 86400000).toISOString(), user: { realName: "李四" } },
+    ]
+  );
+}
+
+export async function getPerformanceRanking() {
+  return realOrMock(
+    () => realApi.get("/performance/ranking"),
+    () => [
+      { user: { realName: "张三" }, score: 128 },
+      { user: { realName: "王五" }, score: 115 },
+      { user: { realName: "李四" }, score: 105 },
+    ]
+  );
+}
+
+export async function getPendingPerformance() {
+  return realOrMock(
+    () => realApi.get("/performance/pending"),
+    () => [
+      { id: "mock_pending_1", title: "食材节约", type: "加分", points: 3, status: "pending", createdAt: new Date().toISOString(), user: { realName: "张三" } },
+    ]
+  );
+}
+
+export async function createPerformanceRecord(payload: { userId?: string; title: string; type: string; points: number; remark?: string }) {
+  return realOrMock(
+    () => realApi.post("/performance/records", payload),
+    () => ({ ...payload, id: `mock_perf_${Date.now()}`, status: "approved", createdAt: new Date().toISOString() })
+  );
+}
+
+export async function getScheduleMonthly() {
+  return realOrMock(
+    () => realApi.get("/schedule/monthly"),
+    () => [
+      { id: "mock_schedule_1", date: new Date().toISOString(), type: "出勤", status: "approved", user: { realName: "张三" } },
+      { id: "mock_schedule_2", date: new Date(Date.now() - 86400000).toISOString(), type: "休假", status: "approved", user: { realName: "李四" } },
+    ]
+  );
+}
+
+export async function getScheduleAttendance() {
+  return realOrMock(() => realApi.get("/schedule/attendance"), () => ({ onDuty: MOCK_USERS.length - 1, onLeave: 1 }));
+}
+
+export async function createScheduleRecord(payload: { userId?: string; date: string; type: string; remark?: string }) {
+  return realOrMock(
+    () => realApi.post("/schedule", payload),
+    () => ({ ...payload, id: `mock_schedule_${Date.now()}`, status: "approved", createdAt: new Date().toISOString() })
+  );
 }
 
 export function getRandomWelcomeMessage() {

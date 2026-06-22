@@ -1,30 +1,33 @@
 import { useEffect, useState } from "react";
+import type React from "react";
 import { Popup } from "antd-mobile";
 import { Bell } from "lucide-react";
 import { useAppStore } from "../../models/appStore";
 import { NOTIFICATION_ORDER } from "../../types/presets";
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from "../../api/mockApi";
+import type { NotificationItem } from "../../types";
 
 export default function NotificationBell() {
   const { notifications, setNotifications } = useAppStore();
   const [visible, setVisible] = useState(false);
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
 
   useEffect(() => {
     getNotifications().then((result) => {
-      if (result.code === 0) setNotifications(result.data);
+      if (result.code === 0) setNotifications(Array.isArray(result.data) ? result.data : []);
     });
   }, [setNotifications]);
 
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
-  const sortedNotifications = [...notifications].sort((a, b) => {
+  const unreadCount = safeNotifications.filter((notification) => !notification.read).length;
+  const sortedNotifications = [...safeNotifications].sort((a, b) => {
     const aIdx = NOTIFICATION_ORDER.indexOf(a.type);
     const bIdx = NOTIFICATION_ORDER.indexOf(b.type);
     if (aIdx !== bIdx) return aIdx - bIdx;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  const grouped = sortedNotifications.reduce<Record<string, typeof sortedNotifications>>((accumulator, notification) => {
-    const key = notification.title;
+  const grouped = sortedNotifications.reduce<Record<string, NotificationItem[]>>((accumulator, notification) => {
+    const key = notification.title || "通知";
     if (!accumulator[key]) accumulator[key] = [];
     accumulator[key].push(notification);
     return accumulator;
@@ -32,12 +35,12 @@ export default function NotificationBell() {
 
   const handleRead = async (id: string) => {
     await markNotificationRead(id);
-    setNotifications(notifications.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)));
+    setNotifications(safeNotifications.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)));
   };
 
   const handleReadAll = async () => {
     await markAllNotificationsRead();
-    setNotifications(notifications.map((notification) => ({ ...notification, read: true })));
+    setNotifications(safeNotifications.map((notification) => ({ ...notification, read: true })));
   };
 
   return (
