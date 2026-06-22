@@ -81,6 +81,14 @@ export async function logout() {
   return realOrMock(() => realApi.post("/logout"), () => true);
 }
 
+export async function getUserInfo() {
+  return realOrMock(() => realApi.get("/user/info"), () => null);
+}
+
+export async function changePassword(oldPassword: string, newPassword: string) {
+  return realOrMock(() => realApi.put("/user/password", { oldPassword, newPassword }), () => true);
+}
+
 export async function register(payload: RegisterPayload) {
   return realOrMock(() => realApi.post("/register", payload), () => ({ ...payload, id: `mock_${Date.now()}`, status: "pending" }));
 }

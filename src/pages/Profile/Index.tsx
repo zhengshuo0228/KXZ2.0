@@ -1,17 +1,67 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pageStyle, containerStyle, PageTitle, SaaSCard, SaaSInput, SaaSButton, ListItem } from "../../components/saas";
+import { changePassword, getUserInfo, logout as apiLogout } from "../../api/mockApi";
 import { useAppStore } from "../../models/appStore";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAppStore();
+  const { currentUser, currentPositions, login, logout } = useAppStore();
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getUserInfo().then((result) => {
+      const data = result.data as any;
+      if (result.code === 0 && data?.user && data?.positions) {
+        login(data.user, data.positions);
+      }
+    });
+  }, [login]);
+
   const user = currentUser;
-  const initial = (user?.realName || user?.username || "U").slice(0, 1).toUpperCase();
+  const initial = (user?.realName || user?.username || "我").slice(0, 1).toUpperCase();
+  const positionText = currentPositions.map((position) => position.name).join("、") || "未设置岗位";
+
+  const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      alert("请填写完整密码信息");
+      return;
+    }
+    if (newPassword.length < 6) {
+      alert("新密码至少 6 位");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert("两次输入的新密码不一致");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await changePassword(oldPassword, newPassword);
+      alert("密码已更新，请使用新密码重新登录");
+      logout();
+      navigate("/login");
+    } catch (error: any) {
+      alert(error?.response?.data?.message || "密码修改失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await apiLogout();
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <PageTitle title="个人信息" subtitle="查看账号资料并修改密码" />
+        <PageTitle title="个人信息" subtitle="查看账号资料、修改密码和退出登录" />
 
         <SaaSCard style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
           <div
@@ -33,7 +83,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800 }}>{user?.realName || "未设置姓名"}</div>
-            <div style={{ fontSize: 13, color: "#64748B", marginTop: 2 }}>{user?.username || "未设置账号"}</div>
+            <div style={{ fontSize: 13, color: "#64748B", marginTop: 2 }}>{user?.username || "未登录"}</div>
           </div>
         </SaaSCard>
 
@@ -42,10 +92,11 @@ export default function ProfilePage() {
           {[
             ["用户名", user?.username || ""],
             ["姓名", user?.realName || ""],
-            ["门店", user?.storeId || ""],
-            ["部门", user?.departmentId || ""],
+            ["门店ID", user?.storeId || ""],
+            ["部门ID", user?.departmentId || ""],
+            ["岗位", positionText],
           ].map(([label, value]) => (
-            <ListItem key={label} title={label} subtitle={String(value)} right={<span style={{ fontSize: 14, color: "#0F172A" }}>{value}</span>} />
+            <ListItem key={label} title={label} subtitle={String(value)} />
           ))}
         </SaaSCard>
 
@@ -53,29 +104,22 @@ export default function ProfilePage() {
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>修改密码</div>
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>原密码</label>
-            <SaaSInput placeholder="请输入原密码" value="" onChange={() => {}} type="password" />
+            <SaaSInput placeholder="请输入原密码" value={oldPassword} onChange={setOldPassword} type="password" />
           </div>
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>新密码</label>
-            <SaaSInput placeholder="请输入新密码" value="" onChange={() => {}} type="password" />
+            <SaaSInput placeholder="至少 6 位" value={newPassword} onChange={setNewPassword} type="password" />
           </div>
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 8 }}>确认新密码</label>
-            <SaaSInput placeholder="请再次输入新密码" value="" onChange={() => {}} type="password" />
+            <SaaSInput placeholder="请再次输入新密码" value={confirmPassword} onChange={setConfirmPassword} type="password" />
           </div>
-          <SaaSButton onClick={() => alert("密码已更新")} block>
-            保存修改
+          <SaaSButton onClick={handleChangePassword} block>
+            {saving ? "保存中..." : "保存修改"}
           </SaaSButton>
         </SaaSCard>
 
-        <SaaSButton
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-          block
-          style={{ background: "#fff", color: "#DC2626", border: "1.5px solid #FEE2E2" }}
-        >
+        <SaaSButton onClick={handleLogout} block style={{ background: "#fff", color: "#DC2626", border: "1.5px solid #FEE2E2" }}>
           退出登录
         </SaaSButton>
       </div>

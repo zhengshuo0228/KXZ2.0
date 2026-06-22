@@ -57,6 +57,27 @@ app.get("/api/user/info", requireAuth, async (req, res) => {
   res.json(ok({ user: toUser(user), positions: user.positions.map((item) => toPosition(item.position)) }));
 });
 
+app.put("/api/user/password", requireAuth, async (req, res) => {
+  const { oldPassword, newPassword } = req.body || {};
+  if (!oldPassword || !newPassword || String(newPassword).length < 6) {
+    return res.status(400).json({ code: 400, data: null, message: "请填写原密码和至少 6 位新密码" });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user) {
+    return res.status(404).json({ code: 404, data: null, message: "账号不存在" });
+  }
+
+  const matched = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!matched) {
+    return res.status(400).json({ code: 400, data: null, message: "原密码错误" });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  res.json(ok(true));
+});
+
 app.post("/api/register", async (req, res) => {
   const { username, password, realName, storeId, departmentId, positionId, remark } = req.body || {};
   if (!username || !password || !realName || !storeId || !departmentId || !positionId) {

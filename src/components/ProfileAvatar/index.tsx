@@ -23,7 +23,7 @@ export default function ProfileAvatar() {
         flexShrink: 0,
       }}
     >
-      {currentUser?.realName?.charAt(0) || "用"}
+      {currentUser?.realName?.charAt(0) || "我"}
     </div>
   );
 }
