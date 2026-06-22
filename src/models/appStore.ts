@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { User, Position, Store, NotificationItem, AdminPermission } from "../types";
+import type { User, Position, Store, Department, NotificationItem, AdminPermission } from "../types";
 
 interface AppState {
   // Auth
@@ -13,7 +13,10 @@ interface AppState {
   // Store
   currentStoreId: string;
   stores: Store[];
+  departments: Department[];
   setCurrentStore: (id: string) => void;
+  setStores: (stores: Store[]) => void;
+  setDepartments: (departments: Department[]) => void;
 
   // Notifications
   notifications: NotificationItem[];
@@ -31,6 +34,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAuthenticated: false,
   currentStoreId: "",
   stores: [],
+  departments: [],
   notifications: [],
 
   login: (user, positions, token = localStorage.getItem("token") || "mock-token") => {
@@ -53,11 +57,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentStoreId: id });
   },
 
+  setStores: (stores) => set({ stores }),
+
+  setDepartments: (departments) => set({ departments }),
+
   setNotifications: (n) => set({ notifications: n }),
 
   hasPermission: (perm) => {
     const { currentUser, currentPositions } = get();
-    if (!currentUser || currentUser.username === "000") return true;
+    if (!currentUser) return false;
+    if (currentUser.username === "000") return true;
     for (const pos of currentPositions) {
       for (const category of Object.values(pos.permissions)) {
         if (category.includes(perm)) return true;

@@ -1,43 +1,36 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pageStyle, containerStyle, PageTitle, SaaSCard, SaaSInput, SaaSButton, ListItem } from "../../components/saas";
-import { changePassword, getUserInfo, logout as apiLogout } from "../../api/mockApi";
+import { changePassword, getDepartments, getStores, getUserInfo, logout as apiLogout } from "../../api/mockApi";
 import { useAppStore } from "../../models/appStore";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { currentUser, currentPositions, login, logout } = useAppStore();
+  const { currentUser, currentPositions, stores, departments, login, logout, setStores, setDepartments } = useAppStore();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    getUserInfo().then((result) => {
-      const data = result.data as any;
-      if (result.code === 0 && data?.user && data?.positions) {
-        login(data.user, data.positions);
-      }
+    Promise.all([getUserInfo(), getStores(), getDepartments()]).then(([infoResult, storeResult, departmentResult]) => {
+      const data = infoResult.data as any;
+      if (infoResult.code === 0 && data?.user && data?.positions) login(data.user, data.positions);
+      if (storeResult.code === 0) setStores(storeResult.data);
+      if (departmentResult.code === 0) setDepartments(departmentResult.data);
     });
-  }, [login]);
+  }, [login, setStores, setDepartments]);
 
   const user = currentUser;
   const initial = (user?.realName || user?.username || "我").slice(0, 1).toUpperCase();
   const positionText = currentPositions.map((position) => position.name).join("、") || "未设置岗位";
+  const storeName = stores.find((store) => store.id === user?.storeId)?.name || user?.storeId || "";
+  const departmentName = departments.find((department) => department.id === user?.departmentId)?.name || user?.departmentId || "";
 
   const handleChangePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      alert("请填写完整密码信息");
-      return;
-    }
-    if (newPassword.length < 6) {
-      alert("新密码至少 6 位");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      alert("两次输入的新密码不一致");
-      return;
-    }
+    if (!oldPassword || !newPassword || !confirmPassword) return alert("请填写完整密码信息");
+    if (newPassword.length < 6) return alert("新密码至少 6 位");
+    if (newPassword !== confirmPassword) return alert("两次输入的新密码不一致");
 
     setSaving(true);
     try {
@@ -92,8 +85,8 @@ export default function ProfilePage() {
           {[
             ["用户名", user?.username || ""],
             ["姓名", user?.realName || ""],
-            ["门店ID", user?.storeId || ""],
-            ["部门ID", user?.departmentId || ""],
+            ["门店", storeName],
+            ["部门", departmentName],
             ["岗位", positionText],
           ].map(([label, value]) => (
             <ListItem key={label} title={label} subtitle={String(value)} />
