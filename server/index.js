@@ -201,7 +201,7 @@ app.get("/api/purchase/menu", async (_req, res) => {
 });
 
 app.get("/api/purchase/menu/template", (_req, res) => {
-  const csv = "\uFEFF分类,子分类,品名,默认数量,单位\n蔬菜,叶菜类,青椒,30,斤\n禽肉,鸡肉,鸡腿,20,斤\n";
+  const csv = "\uFEFF\u5206\u7c7b,\u5b50\u5206\u7c7b,\u54c1\u540d,\u9ed8\u8ba4\u6570\u91cf,\u5355\u4f4d\n\u852c\u83dc,\u53f6\u83dc\u7c7b,\u9752\u6912,30,\u65a4\n\u79bd\u8089,\u9e21\u8089,\u9e21\u817f,20,\u65a4\n";
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", "attachment; filename=ingredient-template.csv");
   res.send(csv);
@@ -210,7 +210,7 @@ app.get("/api/purchase/menu/template", (_req, res) => {
 app.post("/api/purchase/menu/upload", requireAuth, async (req, res) => {
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
   if (items.length === 0) {
-    return res.status(400).json({ code: 400, data: null, message: "请上传食材数据" });
+    return res.status(400).json({ code: 400, data: null, message: "\u8bf7\u4e0a\u4f20\u98df\u6750\u6570\u636e" });
   }
 
   const errors = [];
@@ -223,21 +223,20 @@ app.post("/api/purchase/menu/upload", requireAuth, async (req, res) => {
     const subCategory = String(item.subCategory || "").trim();
     const name = String(item.name || "").trim();
     const defaultQty = Number(item.defaultQty || 0);
-    const unit = String(item.unit || "").trim() || "斤";
+    const unit = String(item.unit || "").trim() || "\u65a4";
 
-    if (!category) errors.push(`第${row}行：分类为空`);
-    if (!name) errors.push(`第${row}行：品名为空`);
-    if (!Number.isFinite(defaultQty) || defaultQty < 0) errors.push(`第${row}行：默认数量格式错误`);
+    if (!category) errors.push(`\u7b2c${row}\u884c\uff1a\u5206\u7c7b\u4e3a\u7a7a`);
+    if (!name) errors.push(`\u7b2c${row}\u884c\uff1a\u54c1\u540d\u4e3a\u7a7a`);
+    if (!Number.isFinite(defaultQty) || defaultQty < 0) errors.push(`\u7b2c${row}\u884c\uff1a\u9ed8\u8ba4\u6570\u91cf\u683c\u5f0f\u9519\u8bef`);
     if (!category || !name || !Number.isFinite(defaultQty) || defaultQty < 0) return;
 
-    const key = name;
-    if (seen.has(key)) errors.push(`第${row}行：品名重复，将按最后一条更新`);
-    seen.add(key);
+    if (seen.has(name)) errors.push(`\u7b2c${row}\u884c\uff1a\u54c1\u540d\u91cd\u590d\uff0c\u5c06\u6309\u6700\u540e\u4e00\u6761\u66f4\u65b0`);
+    seen.add(name);
     normalized.push({ category, subCategory, name, defaultQty, unit });
   });
 
-  if (errors.some((error) => error.includes("为空") || error.includes("格式错误"))) {
-    return res.status(400).json({ code: 400, data: { errors }, message: "上传数据校验失败" });
+  if (errors.some((error) => error.includes("\u4e3a\u7a7a") || error.includes("\u683c\u5f0f\u9519\u8bef"))) {
+    return res.status(400).json({ code: 400, data: { errors }, message: "\u4e0a\u4f20\u6570\u636e\u6821\u9a8c\u5931\u8d25" });
   }
 
   const deduped = Array.from(new Map(normalized.map((item) => [item.name, item])).values());
@@ -259,7 +258,7 @@ app.post("/api/purchase/menu/upload", requireAuth, async (req, res) => {
     }
   }
 
-  res.json(ok({ count: saved.length, warnings: errors.filter((error) => error.includes("重复")), items: saved }));
+  res.json(ok({ count: saved.length, warnings: errors.filter((error) => error.includes("\u91cd\u590d")), items: saved }));
 });
 
 app.get("/api/purchase/orders", async (req, res) => {
@@ -279,7 +278,7 @@ app.get("/api/purchase/orders", async (req, res) => {
 app.post("/api/purchase/orders", requireAuth, async (req, res) => {
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
   if (items.length === 0) {
-    return res.status(400).json({ code: 400, data: null, message: "请选择食材" });
+    return res.status(400).json({ code: 400, data: null, message: "\u8bf7\u9009\u62e9\u98df\u6750" });
   }
 
   const order = await prisma.purchaseOrder.create({
@@ -301,8 +300,8 @@ app.post("/api/purchase/orders", requireAuth, async (req, res) => {
   await prisma.notification.create({
     data: {
       type: "purchase_submit",
-      title: "申购确认",
-      content: `申购单已提交，共 ${items.length} 项`,
+      title: "\u7533\u8d2d\u786e\u8ba4",
+      content: `\u7533\u8d2d\u5355\u5df2\u63d0\u4ea4\uff0c\u5171 ${items.length} \u9879`,
       recipientId: req.user.id,
       linkType: "history",
       linkId: order.id,
@@ -321,12 +320,12 @@ app.put("/api/purchase/orders/:id", requireAuth, async (req, res) => {
     include: { items: true, user: true },
   });
 
-  const itemSummary = order.items.map((item) => `${item.name}${item.qty}${item.unit}`).join("，");
+  const itemSummary = order.items.map((item) => `${item.name}${item.qty}${item.unit}`).join("\uff0c");
   await prisma.notification.create({
     data: {
       type: "purchase_review",
-      title: "申购审核",
-      content: `你的申购单「${itemSummary}」已${approved ? "通过" : "驳回"}`,
+      title: "\u7533\u8d2d\u5ba1\u6838",
+      content: `\u4f60\u7684\u7533\u8d2d\u5355\u300c${itemSummary}\u300d\u5df2${approved ? "\u901a\u8fc7" : "\u9a73\u56de"}`,
       recipientId: order.userId,
       linkType: "history",
       linkId: order.id,
