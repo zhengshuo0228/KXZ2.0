@@ -148,7 +148,9 @@ app.get("/api/stats/summary", requireAuth, async (req, res) => {
 
   const createdAt = { gte: start, lt: end };
   const orderWhere = req.user.username === "000" ? { createdAt } : { createdAt, storeId: req.user.storeId };
-  const [totalOrders, approvedOrders, rejectedOrders, pendingOrders, ingredients, activeUsers, unreadNotifications] = await Promise.all([
+  const recordWhere = req.user.username === "000" ? { createdAt } : { createdAt, storeId: req.user.storeId };
+  const leaveWhere = req.user.username === "000" ? { createdAt, type: "休假" } : { createdAt, type: "休假", storeId: req.user.storeId };
+  const [totalOrders, approvedOrders, rejectedOrders, pendingOrders, ingredients, activeUsers, unreadNotifications, performanceApplied, performanceApproved, leaveCount] = await Promise.all([
     prisma.purchaseOrder.count({ where: orderWhere }),
     prisma.purchaseOrder.count({ where: { ...orderWhere, status: "approved" } }),
     prisma.purchaseOrder.count({ where: { ...orderWhere, status: "rejected" } }),
@@ -156,6 +158,9 @@ app.get("/api/stats/summary", requireAuth, async (req, res) => {
     prisma.ingredient.count(),
     prisma.user.count({ where: req.user.username === "000" ? { status: "active" } : { status: "active", storeId: req.user.storeId } }),
     prisma.notification.count({ where: { OR: [{ recipientId: req.user.id }, { recipientId: null }], read: false } }),
+    prisma.performanceRecord.count({ where: recordWhere }),
+    prisma.performanceRecord.count({ where: { ...recordWhere, status: "approved" } }),
+    prisma.scheduleRecord.count({ where: leaveWhere }),
   ]);
 
   res.json(ok({
@@ -170,9 +175,107 @@ app.get("/api/stats/summary", requireAuth, async (req, res) => {
     ingredient: { total: ingredients },
     account: { activeUsers },
     notification: { unread: unreadNotifications },
-    performance: { applied: 0, approved: 0 },
-    schedule: { onLeave: 0, onDuty: activeUsers },
+    performance: { applied: performanceApplied, approved: performanceApproved },
+    schedule: { onLeave: leaveCount, onDuty: Math.max(activeUsers - leaveCount, 0) },
   }));
+});
+
+app.get("/api/performance/my", requireAuth, async (req, res) => {
+  const records = await prisma.performanceRecord.findMany({
+    where: { userId: req.user.id },
+    orderBy: { createdAt: "desc" },
+    take: 30,
+  });
+  const total = records.reduce((sum, record) => sum + record.points, 0);
+  res.json(ok({ total, records: records.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) }));
+});
+
+app.get("/api/performance/all", requireAuth, async (req, res) => {
+  const where = req.user.username === "000" ? {} : { storeId: req.user.storeId };
+  const records = await prisma.performanceRecord.findMany({
+    where,
+    include: { user: true },
+    orderBy: { createdAt: "desc" },
+    take: 80,
+  });
+  res.json(ok(records.map((item) => ({ ...item, user: toUser(item.user), createdAt: item.createdAt.toISOString() }))));
+});
+
+app.get("/api/performance/ranking", requireAuth, async (req, res) => {
+  const where = req.user.username === "000" ? { status: "approved" } : { status: "approved", storeId: req.user.storeId };
+  const records = await prisma.performanceRecord.findMany({ where, include: { user: true } });
+  const grouped = new Map();
+  for (const record of records) {
+    const current = grouped.get(record.userId) || { user: toUser(record.user), score: 0 };
+    current.score += record.points;
+    grouped.set(record.userId, current);
+  }
+  res.json(ok(Array.from(grouped.values()).sort((a, b) => b.score - a.score).slice(0, 20)));
+});
+
+app.get("/api/performance/pending", requireAuth, async (req, res) => {
+  const where = req.user.username === "000" ? { status: "pending" } : { status: "pending", storeId: req.user.storeId };
+  const records = await prisma.performanceRecord.findMany({ where, include: { user: true }, orderBy: { createdAt: "desc" } });
+  res.json(ok(records.map((item) => ({ ...item, user: toUser(item.user), createdAt: item.createdAt.toISOString() }))));
+});
+
+app.post("/api/performance/records", requireAuth, async (req, res) => {
+  const { userId = req.user.id, title, type = "加分", points = 0, remark = "", status = "approved" } = req.body || {};
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) return res.status(404).json({ code: 404, data: null, message: "员工不存在" });
+  if (!title) return res.status(400).json({ code: 400, data: null, message: "请填写绩效事项" });
+  const record = await prisma.performanceRecord.create({
+    data: { userId: target.id, storeId: target.storeId, title, type, points: Number(points), remark, status },
+  });
+  await prisma.notification.create({
+    data: {
+      type: "performance_adjust",
+      title: "绩效调整",
+      content: `你的绩效记录「${title}」已调整 ${Number(points) >= 0 ? "+" : ""}${Number(points)} 分`,
+      recipientId: target.id,
+      linkType: "performance",
+      linkId: record.id,
+    },
+  });
+  res.json(ok({ ...record, createdAt: record.createdAt.toISOString() }));
+});
+
+app.get("/api/schedule/monthly", requireAuth, async (req, res) => {
+  const where = req.user.username === "000" ? {} : { storeId: req.user.storeId };
+  const records = await prisma.scheduleRecord.findMany({
+    where,
+    include: { user: true },
+    orderBy: { date: "asc" },
+    take: 120,
+  });
+  res.json(ok(records.map((item) => ({ ...item, user: toUser(item.user), date: item.date.toISOString(), createdAt: item.createdAt.toISOString() }))));
+});
+
+app.get("/api/schedule/attendance", requireAuth, async (req, res) => {
+  const activeUsers = await prisma.user.count({ where: req.user.username === "000" ? { status: "active" } : { status: "active", storeId: req.user.storeId } });
+  const onLeave = await prisma.scheduleRecord.count({ where: req.user.username === "000" ? { type: "休假" } : { type: "休假", storeId: req.user.storeId } });
+  res.json(ok({ onDuty: Math.max(activeUsers - onLeave, 0), onLeave }));
+});
+
+app.post("/api/schedule", requireAuth, async (req, res) => {
+  const { userId = req.user.id, date, type = "休假", remark = "" } = req.body || {};
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) return res.status(404).json({ code: 404, data: null, message: "员工不存在" });
+  if (!date) return res.status(400).json({ code: 400, data: null, message: "请选择日期" });
+  const record = await prisma.scheduleRecord.create({
+    data: { userId: target.id, storeId: target.storeId, date: new Date(date), type, remark, status: "approved" },
+  });
+  await prisma.notification.create({
+    data: {
+      type: "schedule_adjust",
+      title: "排休调整",
+      content: `你的排休记录已调整：${new Date(date).toLocaleDateString("zh-CN")} ${type}`,
+      recipientId: target.id,
+      linkType: "schedule",
+      linkId: record.id,
+    },
+  });
+  res.json(ok({ ...record, date: record.date.toISOString(), createdAt: record.createdAt.toISOString() }));
 });
 
 app.get("/api/notifications", async (req, res) => {

@@ -59,6 +59,8 @@ model User {
   registrations Registration[]
   notifications Notification[]
   orders        PurchaseOrder[]
+  performances  PerformanceRecord[]
+  schedules     ScheduleRecord[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -149,4 +151,39 @@ model Authorization {
   type      String
   targetId  String
   createdAt DateTime @default(now())
+}
+
+model PerformanceRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  title     String
+  type      String
+  points    Int
+  status    String   @default("approved")
+  remark    String?
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([storeId])
+  @@index([status])
+}
+
+model ScheduleRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  date      DateTime
+  type      String
+  status    String   @default("approved")
+  remark    String?
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([storeId])
+  @@index([date])
 }
