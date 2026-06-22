@@ -130,6 +130,68 @@ app.get("/api/purchase/menu", async (_req, res) => {
   res.json(ok(menu));
 });
 
+app.get("/api/purchase/menu/template", (_req, res) => {
+  const csv = "\uFEFF分类,子分类,品名,默认数量,单位\n蔬菜,叶菜类,青椒,30,斤\n禽肉,鸡肉,鸡腿,20,斤\n";
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", "attachment; filename=ingredient-template.csv");
+  res.send(csv);
+});
+
+app.post("/api/purchase/menu/upload", requireAuth, async (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  if (items.length === 0) {
+    return res.status(400).json({ code: 400, data: null, message: "请上传食材数据" });
+  }
+
+  const errors = [];
+  const normalized = [];
+  const seen = new Set();
+
+  items.forEach((item, index) => {
+    const row = index + 2;
+    const category = String(item.category || "").trim();
+    const subCategory = String(item.subCategory || "").trim();
+    const name = String(item.name || "").trim();
+    const defaultQty = Number(item.defaultQty || 0);
+    const unit = String(item.unit || "").trim() || "斤";
+
+    if (!category) errors.push(`第${row}行：分类为空`);
+    if (!name) errors.push(`第${row}行：品名为空`);
+    if (!Number.isFinite(defaultQty) || defaultQty < 0) errors.push(`第${row}行：默认数量格式错误`);
+    if (!category || !name || !Number.isFinite(defaultQty) || defaultQty < 0) return;
+
+    const key = name;
+    if (seen.has(key)) errors.push(`第${row}行：品名重复，将按最后一条更新`);
+    seen.add(key);
+    normalized.push({ category, subCategory, name, defaultQty, unit });
+  });
+
+  if (errors.some((error) => error.includes("为空") || error.includes("格式错误"))) {
+    return res.status(400).json({ code: 400, data: { errors }, message: "上传数据校验失败" });
+  }
+
+  const deduped = Array.from(new Map(normalized.map((item) => [item.name, item])).values());
+  const saved = [];
+
+  for (const item of deduped) {
+    const existing = await prisma.ingredient.findFirst({ where: { name: item.name } });
+    const data = {
+      category: item.category,
+      subCategory: item.subCategory,
+      name: item.name,
+      defaultQty: Math.round(item.defaultQty),
+      unit: item.unit,
+    };
+    if (existing) {
+      saved.push(await prisma.ingredient.update({ where: { id: existing.id }, data }));
+    } else {
+      saved.push(await prisma.ingredient.create({ data: { id: `m_${Date.now()}_${saved.length}`, ...data } }));
+    }
+  }
+
+  res.json(ok({ count: saved.length, warnings: errors.filter((error) => error.includes("重复")), items: saved }));
+});
+
 app.get("/api/purchase/orders", async (req, res) => {
   const status = req.query.status ? String(req.query.status) : undefined;
   const orders = await prisma.purchaseOrder.findMany({

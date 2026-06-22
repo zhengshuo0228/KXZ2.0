@@ -107,6 +107,14 @@ export async function getMenu() {
   return realOrMock(() => realApi.get("/purchase/menu"), () => MENU_ITEMS);
 }
 
+export function getMenuTemplateUrl() {
+  return "/api/purchase/menu/template";
+}
+
+export async function uploadMenuItems(items: Array<{ category: string; subCategory: string; name: string; defaultQty: number; unit: string }>) {
+  return realOrMock(() => realApi.post("/purchase/menu/upload", { items }), () => ({ count: items.length, warnings: [], items }));
+}
+
 export async function getOrders(status?: string) {
   return realOrMock(
     () => realApi.get("/purchase/orders", { params: status ? { status } : undefined }),
