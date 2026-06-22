@@ -271,6 +271,92 @@ app.get("/api/admin/registrations", requireAuth, async (_req, res) => {
   res.json(ok(list));
 });
 
+app.get("/api/admin/users", requireAuth, async (_req, res) => {
+  const users = await prisma.user.findMany({
+    include: {
+      store: true,
+      department: true,
+      positions: { include: { position: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(ok(users.map((user) => ({
+    ...toUser(user),
+    storeName: user.store.name,
+    departmentName: user.department.name,
+    positions: user.positions.map((item) => toPosition(item.position)),
+    createdAt: user.createdAt.toISOString(),
+  }))));
+});
+
+app.post("/api/admin/users", requireAuth, async (req, res) => {
+  const { username, password, realName, storeId, departmentId, positionIds } = req.body || {};
+  if (!username || !password || !realName || !storeId || !departmentId || !Array.isArray(positionIds) || positionIds.length === 0) {
+    return res.status(400).json({ code: 400, data: null, message: "缺少必填字段" });
+  }
+
+  const exists = await prisma.user.findUnique({ where: { username } });
+  if (exists) {
+    return res.status(409).json({ code: 409, data: null, message: "用户名已存在" });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = await prisma.user.create({
+    data: {
+      id: `u_${Date.now()}`,
+      username,
+      passwordHash,
+      realName,
+      storeId,
+      departmentId,
+      status: "active",
+      positions: { create: positionIds.map((positionId) => ({ positionId })) },
+    },
+    include: { store: true, department: true, positions: { include: { position: true } } },
+  });
+
+  res.json(ok({
+    ...toUser(user),
+    storeName: user.store.name,
+    departmentName: user.department.name,
+    positions: user.positions.map((item) => toPosition(item.position)),
+    createdAt: user.createdAt.toISOString(),
+  }));
+});
+
+app.put("/api/admin/users/:id/positions", requireAuth, async (req, res) => {
+  const positionIds = Array.isArray(req.body?.positionIds) ? req.body.positionIds : [];
+  if (positionIds.length === 0) {
+    return res.status(400).json({ code: 400, data: null, message: "请选择岗位" });
+  }
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) {
+    return res.status(404).json({ code: 404, data: null, message: "账号不存在" });
+  }
+  if (target.username === "000") {
+    return res.status(403).json({ code: 403, data: null, message: "内置超管账号不可修改" });
+  }
+
+  await prisma.userPosition.deleteMany({ where: { userId: target.id } });
+  for (const positionId of positionIds) {
+    await prisma.userPosition.create({ data: { userId: target.id, positionId } });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: target.id },
+    include: { store: true, department: true, positions: { include: { position: true } } },
+  });
+
+  res.json(ok({
+    ...toUser(user),
+    storeName: user.store.name,
+    departmentName: user.department.name,
+    positions: user.positions.map((item) => toPosition(item.position)),
+    createdAt: user.createdAt.toISOString(),
+  }));
+});
+
 app.put("/api/admin/registrations/:id", requireAuth, async (req, res) => {
   const { approved } = req.body || {};
   const registration = await prisma.registration.findUnique({ where: { id: req.params.id } });

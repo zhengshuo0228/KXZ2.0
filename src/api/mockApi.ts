@@ -38,6 +38,15 @@ type RegisterPayload = {
   remark?: string;
 };
 
+type CreateUserPayload = {
+  username: string;
+  password: string;
+  realName: string;
+  storeId: string;
+  departmentId: string;
+  positionIds: string[];
+};
+
 const ok = <T>(data: T): ApiResponse<T> => ({ code: 0, data });
 const realApi = api as any;
 
@@ -137,6 +146,18 @@ export async function reviewPurchaseOrder(id: string, approved: boolean) {
 
 export async function getRegistrations() {
   return realOrMock(() => realApi.get("/admin/registrations"), () => []);
+}
+
+export async function getAdminUsers() {
+  return realOrMock(() => realApi.get("/admin/users"), () => []);
+}
+
+export async function createAdminUser(payload: CreateUserPayload) {
+  return realOrMock(() => realApi.post("/admin/users", payload), () => ({ ...payload, id: `mock_user_${Date.now()}`, status: "active" }));
+}
+
+export async function updateUserPositions(id: string, positionIds: string[]) {
+  return realOrMock(() => realApi.put(`/admin/users/${id}/positions`, { positionIds }), () => ({ id, positionIds }));
 }
 
 export async function approveRegistration(id: string, approved: boolean) {
