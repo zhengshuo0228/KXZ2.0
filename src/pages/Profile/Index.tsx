@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Toast } from "antd-mobile";
 import { pageStyle, containerStyle, PageTitle, SaaSCard, SaaSInput, SaaSButton, ListItem } from "../../components/saas";
 import { changePassword, getDepartments, getStores, getUserInfo, logout as apiLogout } from "../../api/mockApi";
 import { useAppStore } from "../../models/appStore";
@@ -16,30 +17,33 @@ export default function ProfilePage() {
     Promise.all([getUserInfo(), getStores(), getDepartments()]).then(([infoResult, storeResult, departmentResult]) => {
       const data = infoResult.data as any;
       if (infoResult.code === 0 && data?.user && data?.positions) login(data.user, data.positions);
-      if (storeResult.code === 0) setStores(storeResult.data);
-      if (departmentResult.code === 0) setDepartments(departmentResult.data);
+      if (storeResult.code === 0) setStores(Array.isArray(storeResult.data) ? storeResult.data : []);
+      if (departmentResult.code === 0) setDepartments(Array.isArray(departmentResult.data) ? departmentResult.data : []);
     });
   }, [login, setStores, setDepartments]);
 
   const user = currentUser;
+  const safePositions = Array.isArray(currentPositions) ? currentPositions : [];
+  const safeStores = Array.isArray(stores) ? stores : [];
+  const safeDepartments = Array.isArray(departments) ? departments : [];
   const initial = (user?.realName || user?.username || "我").slice(0, 1).toUpperCase();
-  const positionText = currentPositions.map((position) => position.name).join("、") || "未设置岗位";
-  const storeName = stores.find((store) => store.id === user?.storeId)?.name || user?.storeId || "";
-  const departmentName = departments.find((department) => department.id === user?.departmentId)?.name || user?.departmentId || "";
+  const positionText = safePositions.map((position) => position.name).join("、") || "未设置岗位";
+  const storeName = safeStores.find((store) => store.id === user?.storeId)?.name || user?.storeId || "";
+  const departmentName = safeDepartments.find((department) => department.id === user?.departmentId)?.name || user?.departmentId || "";
 
   const handleChangePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmPassword) return alert("请填写完整密码信息");
-    if (newPassword.length < 6) return alert("新密码至少 6 位");
-    if (newPassword !== confirmPassword) return alert("两次输入的新密码不一致");
+    if (!oldPassword || !newPassword || !confirmPassword) return Toast.show("请填写完整密码信息");
+    if (newPassword.length < 6) return Toast.show("新密码至少 6 位");
+    if (newPassword !== confirmPassword) return Toast.show("两次输入的新密码不一致");
 
     setSaving(true);
     try {
       await changePassword(oldPassword, newPassword);
-      alert("密码已更新，请使用新密码重新登录");
+      Toast.show({ content: "密码已更新，请使用新密码重新登录", icon: "success" });
       logout();
       navigate("/login");
     } catch (error: any) {
-      alert(error?.response?.data?.message || "密码修改失败");
+      Toast.show(error?.response?.data?.message || "密码修改失败");
     } finally {
       setSaving(false);
     }
