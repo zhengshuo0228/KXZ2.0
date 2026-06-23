@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type React from "react";
 import { Popup, Toast } from "antd-mobile";
 import { MapPin } from "lucide-react";
 import { useAppStore } from "../../models/appStore";
+import { getCrossStoreAuthorizations } from "../../api/mockApi";
 
 interface StoreSwitcherProps {
   stores: { id: string; name: string }[];
@@ -11,11 +12,24 @@ interface StoreSwitcherProps {
 export default function StoreSwitcher({ stores }: StoreSwitcherProps) {
   const { currentUser, currentStoreId, setCurrentStore } = useAppStore();
   const [visible, setVisible] = useState(false);
+  const [authorizedStoreIds, setAuthorizedStoreIds] = useState<string[]>([]);
   const safeStores = Array.isArray(stores) ? stores : [];
+
+  useEffect(() => {
+    if (!currentUser || currentUser.username === "000") return;
+    getCrossStoreAuthorizations().then((result) => {
+      if (result.code !== 0 || !Array.isArray(result.data)) return;
+      const ids = result.data
+        .filter((item: any) => item.userId === currentUser.id)
+        .map((item: any) => item.targetId);
+      setAuthorizedStoreIds(ids);
+    });
+  }, [currentUser?.id, currentUser?.username]);
 
   if (!currentUser || safeStores.length <= 1) return null;
 
-  const visibleStores = currentUser.username === "000" ? safeStores : safeStores.filter((store) => store.id === currentUser.storeId);
+  const visibleStoreIds = new Set([currentUser.storeId, ...authorizedStoreIds]);
+  const visibleStores = currentUser.username === "000" ? safeStores : safeStores.filter((store) => visibleStoreIds.has(store.id));
   if (visibleStores.length <= 1) return null;
 
   return (

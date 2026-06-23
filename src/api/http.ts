@@ -10,6 +10,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const currentStore = localStorage.getItem("currentStore");
+  if (currentStore) {
+    config.params = { ...(config.params || {}), storeId: config.params?.storeId || currentStore };
+  }
   return config;
 });
 

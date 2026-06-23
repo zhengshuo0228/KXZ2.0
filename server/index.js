@@ -143,6 +143,15 @@ async function getAccessScope(user) {
   return { all: false, storeIds: Array.from(storeIds), departmentIds: Array.from(departmentIds) };
 }
 
+function scopeForRequest(scope, req) {
+  const requestedStoreId = req.query.storeId ? String(req.query.storeId) : "";
+  if (!requestedStoreId) return scope;
+  if (scope.all || scope.storeIds.includes(requestedStoreId)) {
+    return { ...scope, all: false, storeIds: [requestedStoreId] };
+  }
+  return scope;
+}
+
 function scopedStoreWhere(scope) {
   return scope.all ? {} : { storeId: { in: scope.storeIds } };
 }
@@ -171,7 +180,7 @@ app.get("/api/stats/summary", requireAuth, async (req, res) => {
   if (range === "yesterday") end.setDate(start.getDate() + 1);
   else end.setTime(now.getTime());
 
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const createdAt = { gte: start, lt: end };
   const storeWhere = scopedStoreWhere(scope);
   const userWhere = scopedUserWhere(scope);
@@ -219,7 +228,7 @@ app.get("/api/performance/my", requireAuth, async (req, res) => {
 });
 
 app.get("/api/performance/all", requireAuth, async (req, res) => {
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const where = scopedStoreWhere(scope);
   const records = await prisma.performanceRecord.findMany({
     where,
@@ -231,7 +240,7 @@ app.get("/api/performance/all", requireAuth, async (req, res) => {
 });
 
 app.get("/api/performance/ranking", requireAuth, async (req, res) => {
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const where = { status: "approved", ...scopedStoreWhere(scope) };
   const records = await prisma.performanceRecord.findMany({ where, include: { user: true } });
   const grouped = new Map();
@@ -244,7 +253,7 @@ app.get("/api/performance/ranking", requireAuth, async (req, res) => {
 });
 
 app.get("/api/performance/pending", requireAuth, async (req, res) => {
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const where = { status: "pending", ...scopedStoreWhere(scope) };
   const records = await prisma.performanceRecord.findMany({ where, include: { user: true }, orderBy: { createdAt: "desc" } });
   res.json(ok(records.map((item) => ({ ...item, user: toUser(item.user), createdAt: item.createdAt.toISOString() }))));
@@ -272,7 +281,7 @@ app.post("/api/performance/records", requireAuth, async (req, res) => {
 });
 
 app.get("/api/schedule/monthly", requireAuth, async (req, res) => {
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const where = scopedStoreWhere(scope);
   const records = await prisma.scheduleRecord.findMany({
     where,
@@ -284,7 +293,7 @@ app.get("/api/schedule/monthly", requireAuth, async (req, res) => {
 });
 
 app.get("/api/schedule/attendance", requireAuth, async (req, res) => {
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const activeUsers = await prisma.user.count({ where: { status: "active", ...scopedUserWhere(scope) } });
   const onLeave = await prisma.scheduleRecord.count({ where: { type: "休假", ...scopedStoreWhere(scope) } });
   res.json(ok({ onDuty: Math.max(activeUsers - onLeave, 0), onLeave }));
@@ -399,7 +408,7 @@ app.post("/api/purchase/menu/upload", requireAuth, async (req, res) => {
 
 app.get("/api/purchase/orders", async (req, res) => {
   const status = req.query.status ? String(req.query.status) : undefined;
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const scopeWhere = scopedStoreWhere(scope);
   const orders = await prisma.purchaseOrder.findMany({
     where: status ? { status, ...scopeWhere } : scopeWhere,
@@ -474,13 +483,13 @@ app.put("/api/purchase/orders/:id", requireAuth, async (req, res) => {
 });
 
 app.get("/api/admin/registrations", requireAuth, async (req, res) => {
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const list = await prisma.registration.findMany({ where: scopedStoreWhere(scope), orderBy: { createdAt: "desc" } });
   res.json(ok(list));
 });
 
 app.get("/api/admin/users", requireAuth, async (req, res) => {
-  const scope = await getAccessScope(req.user);
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
   const users = await prisma.user.findMany({
     where: scopedUserWhere(scope),
     include: {
