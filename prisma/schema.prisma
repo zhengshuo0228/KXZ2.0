@@ -151,6 +151,9 @@ model Authorization {
   type      String
   targetId  String
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
 }
 
 model PerformanceRecord {

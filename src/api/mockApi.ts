@@ -191,6 +191,30 @@ export async function approveRegistration(id: string, approved: boolean) {
   return realOrMock(() => realApi.put(`/admin/registrations/${id}`, { approved }), () => ({ id, status: approved ? "approved" : "rejected" }));
 }
 
+export async function getCrossDepartmentAuthorizations() {
+  return realOrMock(() => realApi.get("/admin/auth/cross-dept"), () => []);
+}
+
+export async function createCrossDepartmentAuthorization(payload: { userId: string; targetId: string }) {
+  return realOrMock(() => realApi.post("/admin/auth/cross-dept", payload), () => []);
+}
+
+export async function deleteCrossDepartmentAuthorization(id: string) {
+  return realOrMock(() => realApi.delete(`/admin/auth/cross-dept/${id}`), () => true);
+}
+
+export async function getCrossStoreAuthorizations() {
+  return realOrMock(() => realApi.get("/admin/auth/cross-store"), () => []);
+}
+
+export async function createCrossStoreAuthorization(payload: { userId: string; targetId: string }) {
+  return realOrMock(() => realApi.post("/admin/auth/cross-store", payload), () => []);
+}
+
+export async function deleteCrossStoreAuthorization(id: string) {
+  return realOrMock(() => realApi.delete(`/admin/auth/cross-store/${id}`), () => true);
+}
+
 export async function getMyPerformance() {
   return realOrMock(
     () => realApi.get("/performance/my"),

@@ -567,6 +567,89 @@ app.put("/api/admin/registrations/:id", requireAuth, async (req, res) => {
   res.json(ok(user));
 });
 
+async function listAuthorizations(type) {
+  const authorizations = await prisma.authorization.findMany({
+    where: { type },
+    orderBy: { createdAt: "desc" },
+  });
+  const users = await prisma.user.findMany({
+    where: { id: { in: authorizations.map((item) => item.userId) } },
+    include: { store: true, department: true, positions: { include: { position: true } } },
+  });
+  const userMap = new Map(users.map((user) => [user.id, user]));
+  const departments = type === "cross_dept"
+    ? await prisma.department.findMany({ where: { id: { in: authorizations.map((item) => item.targetId) } }, include: { store: true } })
+    : [];
+  const stores = type === "cross_store"
+    ? await prisma.store.findMany({ where: { id: { in: authorizations.map((item) => item.targetId) } } })
+    : [];
+  const departmentMap = new Map(departments.map((department) => [department.id, department]));
+  const storeMap = new Map(stores.map((store) => [store.id, store]));
+
+  return authorizations.map((item) => {
+    const user = userMap.get(item.userId);
+    const department = departmentMap.get(item.targetId);
+    const store = storeMap.get(item.targetId);
+    return {
+      ...item,
+      user: user ? {
+        ...toUser(user),
+        storeName: user.store?.name,
+        departmentName: user.department?.name,
+        positions: user.positions?.map((entry) => toPosition(entry.position)) || [],
+      } : null,
+      target: department ? { id: department.id, name: department.name, storeName: department.store?.name, type: "department" } : store ? { id: store.id, name: store.name, type: "store" } : { id: item.targetId, name: item.targetId, type },
+      createdAt: item.createdAt.toISOString(),
+    };
+  });
+}
+
+async function createAuthorization(req, res, type) {
+  const { userId, targetId } = req.body || {};
+  if (!userId || !targetId) return res.status(400).json({ code: 400, data: null, message: "请选择员工和授权目标" });
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return res.status(404).json({ code: 404, data: null, message: "员工不存在" });
+  if (type === "cross_dept") {
+    const department = await prisma.department.findUnique({ where: { id: targetId } });
+    if (!department) return res.status(404).json({ code: 404, data: null, message: "目标部门不存在" });
+  }
+  if (type === "cross_store") {
+    const store = await prisma.store.findUnique({ where: { id: targetId } });
+    if (!store) return res.status(404).json({ code: 404, data: null, message: "目标门店不存在" });
+  }
+  const exists = await prisma.authorization.findFirst({ where: { userId, type, targetId } });
+  if (!exists) {
+    await prisma.authorization.create({ data: { userId, type, targetId } });
+  }
+  res.json(ok(await listAuthorizations(type)));
+}
+
+app.get("/api/admin/auth/cross-dept", requireAuth, async (_req, res) => {
+  res.json(ok(await listAuthorizations("cross_dept")));
+});
+
+app.post("/api/admin/auth/cross-dept", requireAuth, async (req, res) => {
+  await createAuthorization(req, res, "cross_dept");
+});
+
+app.delete("/api/admin/auth/cross-dept/:id", requireAuth, async (req, res) => {
+  await prisma.authorization.delete({ where: { id: req.params.id } });
+  res.json(ok(true));
+});
+
+app.get("/api/admin/auth/cross-store", requireAuth, async (_req, res) => {
+  res.json(ok(await listAuthorizations("cross_store")));
+});
+
+app.post("/api/admin/auth/cross-store", requireAuth, async (req, res) => {
+  await createAuthorization(req, res, "cross_store");
+});
+
+app.delete("/api/admin/auth/cross-store/:id", requireAuth, async (req, res) => {
+  await prisma.authorization.delete({ where: { id: req.params.id } });
+  res.json(ok(true));
+});
+
 app.listen(port, () => {
   console.log(`kxzs-api listening on ${port}`);
 });
