@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import type React from "react";
 import { SaaSTab, StatCard, pageStyle, containerStyle, PageTitle, SaaSCard, ListItem } from "../../components/saas";
-import { BarChart3, Bell, ShoppingCart, Sprout, Users } from "lucide-react";
+import { BarChart3, Bell, CalendarDays, ShoppingCart, Sprout, Users } from "lucide-react";
 import { getStatsSummary } from "../../api/mockApi";
 
 type StatsSummary = {
@@ -43,7 +44,7 @@ export default function StatsPage() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <PageTitle title="数据统计" subtitle="查看门店申购、食材、员工与通知概览" />
+        <PageTitle title="数据统计" subtitle="查看门店申购、食材、员工、绩效与通知概览" />
         <SaaSTab items={rangeOptions.map((item) => item.label)} active={activeLabel} onChange={(label) => setRange(rangeOptions.find((item) => item.label === label)?.key || "today")} />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 4 }}>
@@ -57,7 +58,8 @@ export default function StatsPage() {
           <div style={sectionHeaderStyle}>运营概览</div>
           <ListItem title="申购审核状态" subtitle={`通过 ${stats.purchase.approved} · 待审 ${stats.purchase.pending} · 驳回 ${stats.purchase.rejected}`} right={<span style={rightNumberStyle}>{stats.purchase.total} 单</span>} />
           <ListItem title="未读通知" subtitle="当前账号相关通知" right={<span style={{ ...rightNumberStyle, color: "#D97706", display: "inline-flex", alignItems: "center", gap: 4 }}><Bell size={14} />{stats.notification.unread}</span>} />
-          <ListItem title="绩效/排休" subtitle={`绩效申请 ${stats.performance.applied} · 请休 ${stats.schedule.onLeave}`} right={<span style={{ ...rightNumberStyle, color: "#64748B" }}>待接入</span>} />
+          <ListItem title="绩效记录" subtitle={`已申请 ${stats.performance.applied} · 已通过 ${stats.performance.approved}`} right={<span style={{ ...rightNumberStyle, color: "#059669" }}>{stats.performance.approved}</span>} />
+          <ListItem title="考勤排休" subtitle={`休假 ${stats.schedule.onLeave} · 出勤 ${stats.schedule.onDuty}`} right={<span style={{ ...rightNumberStyle, color: "#64748B", display: "inline-flex", alignItems: "center", gap: 4 }}><CalendarDays size={14} />{stats.schedule.onDuty}</span>} />
         </SaaSCard>
       </div>
     </div>

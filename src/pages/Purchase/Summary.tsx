@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SaaSCard, SaaSTab, StatCard, PageTitle, pageStyle, containerStyle, ListItem } from "../../components/saas";
+import { CheckCircle2, ClipboardList, Clock, XCircle } from "lucide-react";
 import { getStatsSummary } from "../../api/mockApi";
 
 type StatsSummary = {
@@ -34,15 +35,15 @@ export default function PurchaseSummary() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <PageTitle title="采购汇总" subtitle="查看申购审核与采购准备概览" />
+        <PageTitle title="采购汇总" subtitle="查看申购审核结果与采购准备概览" />
         <SaaSTab items={ranges.map((item) => item.label)} active={activeLabel} onChange={(label) => setRange(ranges.find((item) => item.label === label)?.key || "today")} />
 
         <SaaSCard>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <StatCard icon={"📋"} label="申购总数" value={stats.purchase.total} detail={`完成率 ${stats.purchase.completionRate}%`} color="#059669" />
-            <StatCard icon={"✅"} label="已通过" value={stats.purchase.approved} detail="可进入采购准备" color="#4F46E5" />
-            <StatCard icon={"⏳"} label="待审核" value={stats.purchase.pending} detail="等待管理员处理" color="#D97706" />
-            <StatCard icon={"❌"} label="已驳回" value={stats.purchase.rejected} detail="需重新提交" color="#DC2626" />
+            <StatCard icon={<ClipboardList size={18} />} label="申购总数" value={stats.purchase.total} detail={`完成率 ${stats.purchase.completionRate}%`} color="#059669" />
+            <StatCard icon={<CheckCircle2 size={18} />} label="已通过" value={stats.purchase.approved} detail="可进入采购准备" color="#4F46E5" />
+            <StatCard icon={<Clock size={18} />} label="待审核" value={stats.purchase.pending} detail="等待管理员处理" color="#D97706" />
+            <StatCard icon={<XCircle size={18} />} label="已驳回" value={stats.purchase.rejected} detail="需重新提交" color="#DC2626" />
           </div>
         </SaaSCard>
 
