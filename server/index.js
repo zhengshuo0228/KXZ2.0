@@ -217,6 +217,49 @@ app.get("/api/stats/summary", requireAuth, async (req, res) => {
   }));
 });
 
+app.get("/api/purchase/summary", requireAuth, async (req, res) => {
+  const range = String(req.query.range || "today");
+  const now = new Date();
+  const start = new Date(now);
+  if (range === "yesterday") {
+    start.setDate(now.getDate() - 1);
+    start.setHours(0, 0, 0, 0);
+  } else if (range === "week") {
+    start.setDate(now.getDate() - 6);
+    start.setHours(0, 0, 0, 0);
+  } else if (range === "month") {
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+  } else {
+    start.setHours(0, 0, 0, 0);
+  }
+  const end = new Date(start);
+  if (range === "yesterday") end.setDate(start.getDate() + 1);
+  else end.setTime(now.getTime());
+
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
+  const orderWhere = { createdAt: { gte: start, lt: end }, ...scopedStoreWhere(scope) };
+  const [total, approved, rejected, pending, ingredients] = await Promise.all([
+    prisma.purchaseOrder.count({ where: orderWhere }),
+    prisma.purchaseOrder.count({ where: { ...orderWhere, status: "approved" } }),
+    prisma.purchaseOrder.count({ where: { ...orderWhere, status: "rejected" } }),
+    prisma.purchaseOrder.count({ where: { ...orderWhere, status: "pending" } }),
+    prisma.ingredient.count(),
+  ]);
+
+  res.json(ok({
+    range,
+    purchase: {
+      total,
+      approved,
+      rejected,
+      pending,
+      completionRate: total ? Math.round((approved / total) * 100) : 0,
+    },
+    ingredient: { total: ingredients },
+  }));
+});
+
 app.get("/api/performance/my", requireAuth, async (req, res) => {
   const records = await prisma.performanceRecord.findMany({
     where: { userId: req.user.id },
@@ -412,6 +455,21 @@ app.get("/api/purchase/orders", async (req, res) => {
   const scopeWhere = scopedStoreWhere(scope);
   const orders = await prisma.purchaseOrder.findMany({
     where: status ? { status, ...scopeWhere } : scopeWhere,
+    include: { items: true, user: true },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(ok(orders.map((order) => ({
+    ...order,
+    user: toUser(order.user),
+    createdAt: order.createdAt.toISOString(),
+  }))));
+});
+
+app.get("/api/purchase/history", requireAuth, async (req, res) => {
+  const scope = scopeForRequest(await getAccessScope(req.user), req);
+  const scopeWhere = scopedStoreWhere(scope);
+  const orders = await prisma.purchaseOrder.findMany({
+    where: scope.all ? scopeWhere : { ...scopeWhere, userId: req.user.id },
     include: { items: true, user: true },
     orderBy: { createdAt: "desc" },
   });
