@@ -77,7 +77,7 @@ export default function PurchaseMenu() {
 
   const reload = async () => {
     const result = await getMenu();
-    if (result.code === 0) setMenu(result.data as MenuItem[]);
+    if (result.code === 0) setMenu(Array.isArray(result.data) ? result.data as MenuItem[] : []);
   };
 
   useEffect(() => {

@@ -29,7 +29,7 @@ export default function PurchaseHistory() {
     setLoading(true);
     getOrders()
       .then((result) => {
-        if (result.code === 0) setOrders(result.data as PurchaseOrder[]);
+        if (result.code === 0) setOrders(Array.isArray(result.data) ? result.data as PurchaseOrder[] : []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -37,7 +37,8 @@ export default function PurchaseHistory() {
   const filteredOrders = orders.filter((order) => {
     const targetStatus = statusMap[tab];
     if (targetStatus && order.status !== targetStatus) return false;
-    const itemText = order.items.map((item) => `${item.name}${item.qty}${item.unit}`).join("，");
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    const itemText = orderItems.map((item) => `${item.name}${item.qty}${item.unit}`).join("，");
     const submitter = order.user?.realName || "我";
     return !search || itemText.includes(search) || submitter.includes(search);
   });
@@ -73,7 +74,8 @@ export default function PurchaseHistory() {
           {loading ? <div style={{ padding: 24, color: "#94A3B8", textAlign: "center" }}>加载中...</div> : null}
           {!loading && filteredOrders.map((order) => {
             const status = getStatus(order.status);
-            const itemText = order.items.map((item) => `${item.name} ${item.qty}${item.unit}`).join("，");
+            const orderItems = Array.isArray(order.items) ? order.items : [];
+            const itemText = orderItems.map((item) => `${item.name} ${item.qty}${item.unit}`).join("，");
             return (
               <ListItem
                 key={order.id}

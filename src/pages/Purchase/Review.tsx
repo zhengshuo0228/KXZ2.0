@@ -10,17 +10,18 @@ type PurchaseOrder = {
   items: Array<{ name: string; qty: number; unit: string }>;
 };
 
+const tabs = ["待审核", "已审核", "操作日志"];
+
 export default function PurchaseReview() {
   const [tab, setTab] = useState("待审核");
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const tabs = ["待审核", "已审核", "操作日志"];
 
   const reload = async () => {
     setLoading(true);
     try {
       const result = await getOrders();
-      if (result.code === 0) setOrders(result.data as PurchaseOrder[]);
+      if (result.code === 0) setOrders(Array.isArray(result.data) ? result.data as PurchaseOrder[] : []);
     } finally {
       setLoading(false);
     }
@@ -33,7 +34,10 @@ export default function PurchaseReview() {
   const pendingOrders = orders.filter((order) => order.status === "pending");
   const reviewedOrders = orders.filter((order) => order.status !== "pending");
 
-  const itemSummary = (order: PurchaseOrder) => order.items.map((item) => `${item.name} ${item.qty}${item.unit}`).join("，");
+  const itemSummary = (order: PurchaseOrder) => {
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    return orderItems.map((item) => `${item.name} ${item.qty}${item.unit}`).join("，");
+  };
 
   const handleReview = async (id: string, approved: boolean) => {
     if (!confirm(approved ? "确认通过该申购单？" : "确认驳回该申购单？")) return;
@@ -88,7 +92,7 @@ export default function PurchaseReview() {
 
         {!loading && tab === "已审核" && (
           reviewedOrders.length === 0 ? (
-            <SaaSCard><EmptyState icon="📭" text="暂无已审核申购" /></SaaSCard>
+            <SaaSCard><EmptyState icon="📥" text="暂无已审核申购" /></SaaSCard>
           ) : reviewedOrders.map((order) => renderOrder(order, false))
         )}
 

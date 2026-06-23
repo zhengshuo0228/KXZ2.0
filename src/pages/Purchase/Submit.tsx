@@ -33,7 +33,7 @@ export default function PurchaseSubmit() {
 
   useEffect(() => {
     getMenu().then((result) => {
-      if (result.code === 0) setMenu(result.data as MenuItem[]);
+      if (result.code === 0) setMenu(Array.isArray(result.data) ? result.data as MenuItem[] : []);
     });
   }, []);
 
